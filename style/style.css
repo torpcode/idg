@@ -60,10 +60,27 @@ body {
   user-select: none;
   cursor: default; }
 
-#gold-mine {
+div#gold-mine {
+  margin-top: 20px;
   width: 96px;
   height: 89px;
   background-image: url("../resources/gold_mine.png");
   cursor: pointer; }
-  #gold-mine:hover {
+  div#gold-mine:hover {
     background-position: 96px 0; }
+
+div#upgrade-income-button {
+  margin-top: 10px; }
+
+div#upgrade-click-button {
+  margin-top: 10px; }
+
+.upg-button, div#upgrade-income-button, div#upgrade-click-button {
+  width: 140px;
+  height: 40px;
+  line-height: 40px;
+  background-color: #557799;
+  text-align: center;
+  cursor: pointer; }
+  .upg-button:hover, div#upgrade-income-button:hover, div#upgrade-click-button:hover {
+    background-color: #7799bb; }

@@ -9,10 +9,24 @@
 </head>
 <body>
 
-<div>Gold: <span id="gold-counter">?</span></div>
-<div>Income: <span id="income">?</span> gold per second</div>
+<div>
+    Gold: <span mk-value="game.gold">?</span>
+</div>
+<div>
+    Income: <span mk-value="game.income">?</span> gold per second
+</div>
+<div id="upgrade-income-button">Upgrade income</div>
+<div id="upgrade-income-price">
+    Price: <span mk-value="game.upgradeIncomePrice">?</span> gold
+</div>
+
 <div id="gold-mine"></div>
-<div>Gold per click: <span id="gold-per-click">?</span> gold per second</div>
+<div>Gold per click: <span mk-value="game.goldPerClick">?</span> gold per second</div>
+<div>Total clicks: <span mk-value="game.totalClicks"></span></div>
+
+<div id="upgrade-click-button">Upgrade gold mine</div>
+<div id="upgrade-click-price">Price: <span mk-value="game.upgradeClickPrice">?</span> gold</div>
+
 
 </body>
 </html>

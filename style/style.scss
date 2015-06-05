@@ -19,7 +19,8 @@ body {
   cursor: default;
 }
 
-#gold-mine {
+div#gold-mine {
+  margin-top: 20px;
   width: 96px;
   height: 89px;
   background-image: url('../resources/gold_mine.png');
@@ -27,5 +28,30 @@ body {
 
   &:hover {
     background-position: 96px 0;
+  }
+}
+
+div#upgrade-income-button {
+  @extend .upg-button;
+  margin-top: 10px;
+}
+
+div#upgrade-click-button {
+  @extend .upg-button;
+  margin-top: 10px;
+}
+
+.upg-button {
+  width: 140px;
+  $ht: 40px;
+  height: $ht;
+  line-height: $ht;
+
+  background-color: #557799;
+  text-align: center;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #7799bb;
   }
 }
