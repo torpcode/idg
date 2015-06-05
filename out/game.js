@@ -6,5 +6,5 @@
     function main() {
     }
 })();
-/// <reference path='code/main.ts' /> 
+/// <reference path='main.ts' /> 
 //# sourceMappingURL=game.js.map
