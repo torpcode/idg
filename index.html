@@ -15,18 +15,25 @@
 <div>
     Income: <span mk-value="game.income">?</span> gold per second
 </div>
-<div id="upgrade-income-button">Upgrade income</div>
-<div id="upgrade-income-price">
-    Price: <span mk-value="game.upgradeIncomePrice">?</span> gold
+<div id="upgrade-income-button">
+    Upgrade income
+    <div class="level">Current level: <span mk-value="game.incomeLevel">?</span></div>
 </div>
+<div>Price: <span mk-value="game.upgradeIncomePrice">?</span> gold</div>
 
 <div id="gold-mine"></div>
-<div>Gold per click: <span mk-value="game.goldPerClick">?</span> gold per second</div>
+<div>Gold per click: <span mk-value="game.goldPerClick">?</span></div>
+
+<div id="upgrade-click-button">
+    Upgrade gold mine
+    <div class="level">Current level: <span mk-value="game.clickLevel">?</span></div>
+</div>
+<div>Price: <span mk-value="game.upgradeClickPrice">?</span> gold</div>
+
+<h1>Statistics</h1>
+<div>Total gold earned: <span mk-value="game.totalGoldEarned">?</span></div>
 <div>Total clicks: <span mk-value="game.totalClicks"></span></div>
-
-<div id="upgrade-click-button">Upgrade gold mine</div>
-<div id="upgrade-click-price">Price: <span mk-value="game.upgradeClickPrice">?</span> gold</div>
-
+<div>Total time played: <span mk-value="game.totalTimePlayed">?</span></div>
 
 </body>
 </html>

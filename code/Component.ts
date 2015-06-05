@@ -1,4 +1,12 @@
+/**
+ * Represents a function listening for value changes of a component.
+ */
 type ValueListener = (value: number) => void;
+
+/**
+ * Represents a function that can transform a numeric value to a representable textual string.
+ */
+type ValueFormatter = (value: number) => string;
 
 /**
  * An object which wraps a numeric value, ensuring it always stays valid.
@@ -7,9 +15,14 @@ class Component {
     private _value: number;
     private elements: HTMLElement[];
     private valueListeners: ValueListener[];
+    private formatter: ValueFormatter;
 
-    constructor(initValue: number) {
+    constructor(initValue: number, formatter?: ValueFormatter) {
         this._value = initValue;
+
+        if (formatter) {
+            this.formatter = formatter;
+        }
     }
 
     public get val(): number {
@@ -68,7 +81,14 @@ class Component {
      * Creates a pretty textual representation of the current value of the component.
      */
     private formatValue(): string {
-        return "" + Math.floor(this._value*10)/10;
+        const formatter = this.formatter;
+        if (formatter) {
+            // Use a custom formatter, if there is one
+            return formatter(this._value);
+        } else {
+            // Default formatting
+            return "" + Math.floor(this._value*10)/10;
+        }
     }
 
     /**

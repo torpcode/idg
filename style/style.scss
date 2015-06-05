@@ -1,5 +1,8 @@
 @import "reset";
 
+// General layout
+// ========================================================
+
 body {
   background-color: #cccccc;
 
@@ -19,10 +22,20 @@ body {
   cursor: default;
 }
 
+h1 {
+  margin: 8px 0;
+  font-size: 18px;
+  color: #22aa22;
+}
+
+// Specific game stuff
+// ========================================================
+
 div#gold-mine {
   margin-top: 20px;
   width: 96px;
   height: 89px;
+
   background-image: url('../resources/gold_mine.png');
   cursor: pointer;
 
@@ -42,16 +55,27 @@ div#upgrade-click-button {
 }
 
 .upg-button {
-  width: 140px;
-  $ht: 40px;
-  height: $ht;
-  line-height: $ht;
+  position: relative;
+  width: 150px;
+  height: 45px;
+  line-height: 34px;
 
-  background-color: #557799;
+  font-size: 15px;
   text-align: center;
   cursor: pointer;
 
   &:hover {
     background-color: #7799bb;
+  }
+
+  // The label showing the current level of the upgrade
+  .level {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    line-height: 18px;
+
+    font-size: 11px;
+    color: #111111;
   }
 }

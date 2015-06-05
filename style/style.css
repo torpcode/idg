@@ -60,6 +60,11 @@ body {
   user-select: none;
   cursor: default; }
 
+h1 {
+  margin: 8px 0;
+  font-size: 18px;
+  color: #22aa22; }
+
 div#gold-mine {
   margin-top: 20px;
   width: 96px;
@@ -76,11 +81,19 @@ div#upgrade-click-button {
   margin-top: 10px; }
 
 .upg-button, div#upgrade-income-button, div#upgrade-click-button {
-  width: 140px;
-  height: 40px;
-  line-height: 40px;
-  background-color: #557799;
+  position: relative;
+  width: 150px;
+  height: 45px;
+  line-height: 34px;
+  font-size: 15px;
   text-align: center;
   cursor: pointer; }
   .upg-button:hover, div#upgrade-income-button:hover, div#upgrade-click-button:hover {
     background-color: #7799bb; }
+  .upg-button .level, div#upgrade-income-button .level, div#upgrade-click-button .level {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    line-height: 18px;
+    font-size: 11px;
+    color: #111111; }
