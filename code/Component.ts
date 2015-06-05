@@ -37,13 +37,20 @@ class Component {
 
         // Render attached elements to represent the
         // current value of the element.
-        const text = "" + this._value;
+        const text = "" + Math.floor(this._value);
         for (let i = 0; i < elements.length; i++) {
             elements[i].innerHTML = text;
         }
     }
 
-    public attachElement(element: HTMLElement): void {
+    public attachElement(elementID: string): void {
+        const element = document.getElementById(elementID);
+
+        if (!element) {
+            // Throw now, instead of a less clear error later on.
+            throw new Error("No element matches the specified id.");
+        }
+
         // Update the contents of the element immediately,
         // instead of it being outdated until the next
         // time the value of this component changes.

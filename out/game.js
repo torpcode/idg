@@ -6,7 +6,7 @@
      */
     function main() {
         var game = new Game();
-        // Game loop
+        // Start the game loop
         var lastTick = Date.now();
         setInterval(function () {
             // Calculate elapsed time
@@ -53,12 +53,17 @@ var Component = (function () {
         }
         // Render attached elements to represent the
         // current value of the element.
-        var text = "" + this._value;
+        var text = "" + Math.floor(this._value);
         for (var i = 0; i < elements.length; i++) {
             elements[i].innerHTML = text;
         }
     };
-    Component.prototype.attachElement = function (element) {
+    Component.prototype.attachElement = function (elementID) {
+        var element = document.getElementById(elementID);
+        if (!element) {
+            // Throw now, instead of a less clear error later on.
+            throw new Error("No element matches the specified id.");
+        }
         // Update the contents of the element immediately,
         // instead of it being outdated until the next
         // time the value of this component changes.
@@ -76,11 +81,19 @@ var Component = (function () {
  */
 var Game = (function () {
     function Game() {
+        var _this = this;
         this.gold = new Component(0);
-        this.gold.attachElement(document.getElementById("gold-counter"));
+        this.income = new Component(1);
+        this.goldPerClick = new Component(1);
+        this.gold.attachElement("gold-counter");
+        this.income.attachElement("income");
+        this.goldPerClick.attachElement("gold-per-click");
+        document.getElementById("gold-mine").addEventListener("click", function () {
+            _this.gold.val += _this.goldPerClick.val;
+        });
     }
     Game.prototype.update = function (elapsedMS) {
-        this.gold.val += elapsedMS;
+        this.gold.val += this.income.val * (elapsedMS / 1000);
     };
     return Game;
 })();

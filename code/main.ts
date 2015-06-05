@@ -7,7 +7,7 @@
     function main(): void {
         const game = new Game();
 
-        // Game loop
+        // Start the game loop
         let lastTick = Date.now();
         setInterval(function (): void {
             // Calculate elapsed time
