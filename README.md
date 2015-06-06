@@ -1,2 +1,2 @@
-Welp, it appears to be shaping up as some sort of 'idle' game.
-==============
+Welp, it appears to be shaping up to be some sort of 'idle' game.
+--------------
