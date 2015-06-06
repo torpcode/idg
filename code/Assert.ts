@@ -1,3 +1,6 @@
+/**
+ * Contains assertion methods for verifying conditions.
+ */
 module Assert {
     /**
      * Assert that a value is `truthy`.

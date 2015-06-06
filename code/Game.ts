@@ -48,6 +48,7 @@ class Game {
         storage.bind("tc", this.totalClicks);
         storage.bind("tt", this.totalTimePlayed);
 
+        // VVVVV Needs work! VVVVV
         this.gold.addValueListener(() => {
             $.id("upgrade-income-button").style.backgroundColor
                 = (this.gold.val >= this.upgradeIncomePrice.val) ? "#33cc33" : "#ee2222";

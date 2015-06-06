@@ -42,7 +42,7 @@ class AchievementTracker {
             // Kinda messy, but works fine...
             let progress;
             if (isUnlocked) {
-                progress = `<div style="font-size: 16px; margin-top: 8px;color: #22cc22;">Unlocked</div>`;
+                progress = `<div style="font-size: 16px; margin-top: 8px; color: #22cc22;">Unlocked</div>`;
             } else {
                 let pp = formatter(cmp.val) + " / " + formatter(value);
                 let pctWidth = (100*cmp.val/value);

@@ -76,6 +76,9 @@ var $;
     }
     $.commify = commify;
 })($ || ($ = {}));
+/**
+ * Contains assertion methods for verifying conditions.
+ */
 var Assert;
 (function (Assert) {
     /**
@@ -542,6 +545,7 @@ var Game = (function () {
         storage.bind("tm", this.totalGoldMined);
         storage.bind("tc", this.totalClicks);
         storage.bind("tt", this.totalTimePlayed);
+        // VVVVV Needs work! VVVVV
         this.gold.addValueListener(function () {
             $.id("upgrade-income-button").style.backgroundColor
                 = (_this.gold.val >= _this.upgradeIncomePrice.val) ? "#33cc33" : "#ee2222";
@@ -644,7 +648,7 @@ var AchievementTracker = (function () {
             // Kinda messy, but works fine...
             var progress;
             if (isUnlocked) {
-                progress = "<div style=\"font-size: 16px; margin-top: 8px;color: #22cc22;\">Unlocked</div>";
+                progress = "<div style=\"font-size: 16px; margin-top: 8px; color: #22cc22;\">Unlocked</div>";
             }
             else {
                 var pp = formatter(cmp.val) + " / " + formatter(value);
