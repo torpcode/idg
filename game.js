@@ -76,6 +76,32 @@ var $;
     }
     $.commify = commify;
 })($ || ($ = {}));
+var Assert;
+(function (Assert) {
+    /**
+     * Assert that a value is `truthy`.
+     * @see {@link https://developer.mozilla.org/en-US/docs/Glossary/Truthy}
+     */
+    function truthy(value) {
+        if (!value) {
+            fail("Expected value to be truthy.");
+        }
+    }
+    Assert.truthy = truthy;
+    /**
+     * Asserts that a value is `falsy`.
+     * @see {@link https://developer.mozilla.org/en-US/docs/Glossary/Falsy}
+     */
+    function falsy(value) {
+        if (value) {
+            fail("Expected value to be falsy.");
+        }
+    }
+    Assert.falsy = falsy;
+    function fail(errorMessage) {
+        throw new Error("Assertion error: " + errorMessage);
+    }
+})(Assert || (Assert = {}));
 /**
  * An object that simplifies saving and loading game data.
  */
@@ -195,6 +221,52 @@ var Tooltip;
         tooltipElem = $.id("tooltip");
     }
 })(Tooltip || (Tooltip = {}));
+var Display;
+(function (Display) {
+    // The head and tail of a singly-linked-list structure
+    // used internally to store display nodes queued for
+    // rendering.
+    var firstNode, lastNode;
+    function queueForRender(node) {
+        if (node.isQueuedForRender) {
+            // This node is already queued for rendering; there's
+            // no point of rendering a node twice in the same frame.
+            return;
+        }
+        node.isQueuedForRender = true;
+        if (!firstNode) {
+            Assert.falsy(lastNode);
+            // Render queue is empty.
+            firstNode = lastNode = node;
+        }
+        else {
+            Assert.truthy(lastNode);
+            // Render queue is not empty.
+            lastNode.nextQueued = node;
+            lastNode = node;
+        }
+        // Invalidate new node
+        node.nextQueued = null;
+    }
+    Display.queueForRender = queueForRender;
+    function render() {
+        // Render queued nodes
+        var node = firstNode;
+        while (node) {
+            node.render();
+            node.isQueuedForRender = false;
+            // Invalidating the 'next' reference of the node is
+            // currently not required, since its value isn't used
+            // for anything other than when the node is queued for
+            // rendering; in which case the 'next' property of
+            // the node is specifically set when it is queued.
+            node = node.nextQueued;
+        }
+        // Empty the render queue
+        firstNode = lastNode = null;
+    }
+    Display.render = render;
+})(Display || (Display = {}));
 /**
  * A simple MVC tool for to link the HTML with the game stuff.
  */
@@ -270,7 +342,8 @@ var Component = (function () {
             this._value = value;
             this.invokeValueListeners(value);
             this.checkMaxValue(value);
-            this.render();
+            // Request a render at the end of the frame
+            Display.queueForRender(this);
         },
         enumerable: true,
         configurable: true
@@ -285,6 +358,13 @@ var Component = (function () {
             return;
         }
         var text = this.formatValue();
+        if (text === this.valueAsText) {
+            // Same text as what was previously rendered,
+            // so re-rendering the attached elements to
+            // the same value can be avoided.
+            return;
+        }
+        this.valueAsText = text;
         for (var i = 0; i < elements.length; i++) {
             elements[i].innerHTML = text;
         }
@@ -447,6 +527,10 @@ var Game = (function () {
         // Total time that has been accounted for by the game loop.
         // Basically this is the total amount of time played, not including time between sessions.
         this.totalTimePlayed = new Component(0, $.timeSpan);
+        // Used to display the current framerate
+        this.frameTime = 0;
+        this.frameCount = 0;
+        this.frameRate = new Component(0);
         storage.bind("gd", this.gold);
         storage.bind("in", this.income);
         storage.bind("il", this.incomeLevel);
@@ -513,6 +597,13 @@ var Game = (function () {
     Game.prototype.update = function (elapsedMS) {
         this.earnGold(this.income.val * (elapsedMS / 1000));
         this.totalTimePlayed.val += elapsedMS;
+        this.frameCount++;
+        this.frameTime += elapsedMS;
+        if (this.frameTime >= 1000) {
+            this.frameRate.val = (this.frameCount * 1000 / this.frameTime);
+            this.frameTime = 0;
+            this.frameCount = 0;
+        }
     };
     return Game;
 })();
@@ -617,13 +708,17 @@ var AchievementTracker = (function () {
                 autoSaveTimer = 0;
                 storage.save();
             }
+            // Render
+            Display.render();
         }, 1000 / 30);
     }
 })();
 /// <reference path="define.ts" />
 /// <reference path="utils.ts" />
+/// <reference path="Assert.ts" />
 /// <reference path="StorageDevice.ts" />
 /// <reference path="Tooltip.ts" />
+/// <reference path="Display.ts" />
 /// <reference path="HtmlView.ts" />
 /// <reference path="Component.ts" />
 /// <reference path="Game.ts" />

@@ -38,6 +38,9 @@
                 storage.save();
             }
 
+            // Render
+            Display.render();
+
         }, 1000/30);
     }
 

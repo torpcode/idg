@@ -11,13 +11,17 @@ type ValueFormatter = (value: number) => string;
 /**
  * An object which wraps a numeric value, ensuring it always stays valid.
  */
-class Component {
+class Component implements DisplayNode {
     private _value: number;
     private maxValueReached: number;
     private elements: HTMLElement[];
+    private valueAsText: string;
     private valueListeners: ValueListener[];
     private formatter: ValueFormatter;
     private milestoneListeners: { value: number, listener: ()=>void }[];
+
+    public isQueuedForRender: boolean;
+    public nextQueued: DisplayNode;
 
     constructor(initValue: number, formatter?: ValueFormatter) {
         this._value = initValue;
@@ -46,13 +50,15 @@ class Component {
         this._value = value;
         this.invokeValueListeners(value);
         this.checkMaxValue(value);
-        this.render();
+
+        // Request a render at the end of the frame
+        Display.queueForRender(this);
     }
 
     /**
      * Updates the contents of all attached elements to reflect the current value of the component.
      */
-    private render(): void {
+    public render(): void {
         const elements = this.elements;
         if (!elements) {
             // No elements to render
@@ -60,6 +66,14 @@ class Component {
         }
 
         const text = this.formatValue();
+        if (text === this.valueAsText) {
+            // Same text as what was previously rendered,
+            // so re-rendering the attached elements to
+            // the same value can be avoided.
+            return;
+        }
+        this.valueAsText = text;
+
         for (let i = 0; i < elements.length; i++) {
             elements[i].innerHTML = text;
         }

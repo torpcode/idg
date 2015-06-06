@@ -29,6 +29,11 @@ class Game {
     // Basically this is the total amount of time played, not including time between sessions.
     private totalTimePlayed = new Component(0, $.timeSpan);
 
+    // Used to display the current framerate
+    private frameTime = 0;
+    private frameCount = 0;
+    private frameRate = new Component(0);
+
     constructor(storage: StorageDevice) {
         storage.bind("gd", this.gold);
         storage.bind("in", this.income);
@@ -42,7 +47,6 @@ class Game {
         storage.bind("tm", this.totalGoldMined);
         storage.bind("tc", this.totalClicks);
         storage.bind("tt", this.totalTimePlayed);
-
 
         this.gold.addValueListener(() => {
             $.id("upgrade-income-button").style.backgroundColor
@@ -109,5 +113,14 @@ class Game {
         this.earnGold(this.income.val*(elapsedMS/1000));
 
         this.totalTimePlayed.val += elapsedMS;
+
+        this.frameCount++;
+        this.frameTime += elapsedMS;
+        if (this.frameTime >= 1000) {
+            this.frameRate.val = (this.frameCount*1000/this.frameTime);
+
+            this.frameTime = 0;
+            this.frameCount = 0;
+        }
     }
 }
