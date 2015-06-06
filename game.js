@@ -81,6 +81,12 @@ var $;
  */
 var Assert;
 (function (Assert) {
+    function is(value) {
+        if (value !== true) {
+            fail("Expected value to be true.");
+        }
+    }
+    Assert.is = is;
     /**
      * Assert that a value is `truthy`.
      * @see {@link https://developer.mozilla.org/en-US/docs/Glossary/Truthy}
@@ -104,6 +110,7 @@ var Assert;
     function fail(errorMessage) {
         throw new Error("Assertion error: " + errorMessage);
     }
+    Assert.fail = fail;
 })(Assert || (Assert = {}));
 /**
  * An object that simplifies saving and loading game data.
@@ -130,17 +137,17 @@ var StorageDevice = (function () {
         }
         this.loadedData = data;
     };
-    StorageDevice.prototype.bind = function (key, cmp) {
-        // Load data for this component immediately, it there is any
+    StorageDevice.prototype.bind = function (key, load, getSaveData) {
+        // Load data immediately, if there is
+        // any data matching the key.
         var loadedData = this.loadedData;
         if (loadedData) {
             if (loadedData.hasOwnProperty(key)) {
-                cmp.val = loadedData[key];
+                load(loadedData[key]);
             }
         }
-        // Ensure that both keys and components are unique.
-        // A duplicate key or component will both result in
-        // save data overwriting.
+        // Ensure that keys are unique, as duplicate keys
+        // will result in save data being overwriting.
         var bindings = this.bindings;
         for (var i = 0; i < bindings.length; i++) {
             var b = bindings[i];
@@ -148,20 +155,19 @@ var StorageDevice = (function () {
                 // Key collision
                 throw new Error("Binding keys for components must be unique.");
             }
-            if (b.cmp === cmp) {
-                // Component collision
-                throw new Error("The same component cannot be bound twice to the same storage device.");
-            }
         }
-        this.bindings.push({ key: key, cmp: cmp });
+        this.bindings.push({ key: key, getSaveData: getSaveData });
     };
-    StorageDevice.prototype.save = function () {
+    StorageDevice.prototype.bindCmp = function (key, cmp) {
+        this.bind(key, function (x) { return cmp.val; }, function () { return cmp.val; });
+    };
+    StorageDevice.prototype.saveCurrentState = function () {
         // Populate an object with the required save data
         var data = {};
         var bindings = this.bindings;
         for (var i = 0; i < bindings.length; i++) {
             var b = bindings[i];
-            data[b.key] = b.cmp.val;
+            data[b.key] = b.getSaveData();
         }
         localStorage.setItem(this.storageKey, JSON.stringify(data));
     };
@@ -514,13 +520,13 @@ var Game = (function () {
         // Current level of the income upgrade.
         this.incomeLevel = new Component(1);
         // Amount of gold required to upgrade the income to the next level.
-        this.upgradeIncomePrice = new Component(10);
+        this.incomeUpgradePrice = new Component(10);
         // Amount of gold earned by clicking the gold mine once.
         this.goldPerClick = new Component(1);
         // Current level of the gold per click upgrade.
         this.clickLevel = new Component(1);
         // Amount of gold required to upgrade the gold per click to the next level.
-        this.upgradeClickPrice = new Component(10);
+        this.clickUpgradePrice = new Component(10);
         // Total amount of gold earned throughout the game (from all sources).
         this.totalGoldEarned = new Component(0);
         // Total amount of gold earned exclusively by clicking the gold mine.
@@ -530,33 +536,39 @@ var Game = (function () {
         // Total time that has been accounted for by the game loop.
         // Basically this is the total amount of time played, not including time between sessions.
         this.totalTimePlayed = new Component(0, $.timeSpan);
-        // Used to display the current framerate
+        // Used to display the current frame rate
         this.frameTime = 0;
         this.frameCount = 0;
         this.frameRate = new Component(0);
-        storage.bind("gd", this.gold);
-        storage.bind("in", this.income);
-        storage.bind("il", this.incomeLevel);
-        storage.bind("up", this.upgradeIncomePrice);
-        storage.bind("gp", this.goldPerClick);
-        storage.bind("cl", this.clickLevel);
-        storage.bind("cp", this.upgradeClickPrice);
-        storage.bind("tg", this.totalGoldEarned);
-        storage.bind("tm", this.totalGoldMined);
-        storage.bind("tc", this.totalClicks);
-        storage.bind("tt", this.totalTimePlayed);
+        storage.bindCmp("gd", this.gold);
+        storage.bind("cp", function (data) {
+            data >>>= 0;
+            while (data-- > 0) {
+                _this.tryUpgradeIncome(true);
+            }
+        }, function () { return _this.incomeLevel.val; });
+        storage.bind("il", function (data) {
+            data >>>= 0;
+            while (data-- > 0) {
+                _this.tryUpgradeClick(true);
+            }
+        }, function () { return _this.clickLevel.val; });
+        storage.bindCmp("tg", this.totalGoldEarned);
+        storage.bindCmp("tm", this.totalGoldMined);
+        storage.bindCmp("tc", this.totalClicks);
+        storage.bindCmp("tt", this.totalTimePlayed);
         // VVVVV Needs work! VVVVV
         this.gold.addValueListener(function () {
             $.id("upgrade-income-button").style.backgroundColor
-                = (_this.gold.val >= _this.upgradeIncomePrice.val) ? "#33cc33" : "#ee2222";
+                = (_this.gold.val >= _this.incomeUpgradePrice.val) ? "#33cc33" : "#ee2222";
         });
         this.gold.addValueListener(function () {
             $.id("upgrade-click-button").style.backgroundColor
-                = (_this.gold.val >= _this.upgradeClickPrice.val) ? "#33cc33" : "#ee2222";
+                = (_this.gold.val >= _this.clickUpgradePrice.val) ? "#33cc33" : "#ee2222";
         });
         $.id("gold-mine").addEventListener("click", function () { return _this.clickGoldMine(); });
-        $.id("upgrade-income-button").addEventListener("click", function () { return _this.tryUpgradeIncome(); });
-        $.id("upgrade-click-button").addEventListener("click", function () { return _this.tryUpgradeClick(); });
+        $.id("upgrade-income-button").addEventListener("click", function () { return _this.tryUpgradeIncome(false); });
+        $.id("upgrade-click-button").addEventListener("click", function () { return _this.tryUpgradeClick(false); });
     }
     Game.prototype.earnGold = function (value) {
         // assert (value > 0)
@@ -575,28 +587,28 @@ var Game = (function () {
     /**
      * Upgrades the player's passive income, if he has enough gold.
      */
-    Game.prototype.tryUpgradeIncome = function () {
-        if (this.gold.val < this.upgradeIncomePrice.val) {
+    Game.prototype.tryUpgradeIncome = function (forFree) {
+        if (!forFree && this.gold.val < this.incomeUpgradePrice.val) {
             // Not enough gold
             return;
         }
-        this.gold.val -= this.upgradeIncomePrice.val;
-        this.income.val++;
+        this.gold.val -= this.incomeUpgradePrice.val;
+        this.income.val = Math.floor(this.income.val * 1.1 + 1);
         this.incomeLevel.val++;
-        this.upgradeIncomePrice.val *= 1.2;
+        this.incomeUpgradePrice.val *= 1.2;
     };
     /**
      * Upgrades the player's gold per click, if he has enough gold.
      */
-    Game.prototype.tryUpgradeClick = function () {
-        if (this.gold.val < this.upgradeClickPrice.val) {
+    Game.prototype.tryUpgradeClick = function (forFree) {
+        if (!forFree && this.gold.val < this.clickUpgradePrice.val) {
             // Not enough gold
             return;
         }
-        this.gold.val -= this.upgradeClickPrice.val;
-        this.goldPerClick.val++;
+        this.gold.val -= this.clickUpgradePrice.val;
+        this.goldPerClick.val = Math.floor(this.goldPerClick.val * 1.1 + 1);
         this.clickLevel.val++;
-        this.upgradeClickPrice.val *= 1.2;
+        this.clickUpgradePrice.val *= 1.2;
     };
     Game.prototype.update = function (elapsedMS) {
         this.earnGold(this.income.val * (elapsedMS / 1000));
@@ -710,7 +722,7 @@ var AchievementTracker = (function () {
             autoSaveTimer += elapsedMS;
             if (autoSaveTimer >= 7000) {
                 autoSaveTimer = 0;
-                storage.save();
+                storage.saveCurrentState();
             }
             // Render
             Display.render();

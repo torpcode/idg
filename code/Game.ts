@@ -10,14 +10,14 @@ class Game {
     // Current level of the income upgrade.
     private incomeLevel = new Component(1);
     // Amount of gold required to upgrade the income to the next level.
-    private upgradeIncomePrice = new Component(10);
+    private incomeUpgradePrice = new Component(10);
 
     // Amount of gold earned by clicking the gold mine once.
     private goldPerClick = new Component(1);
     // Current level of the gold per click upgrade.
     private clickLevel = new Component(1);
     // Amount of gold required to upgrade the gold per click to the next level.
-    private upgradeClickPrice = new Component(10);
+    private clickUpgradePrice = new Component(10);
 
     // Total amount of gold earned throughout the game (from all sources).
     private totalGoldEarned = new Component(0);
@@ -29,38 +29,45 @@ class Game {
     // Basically this is the total amount of time played, not including time between sessions.
     private totalTimePlayed = new Component(0, $.timeSpan);
 
-    // Used to display the current framerate
+    // Used to display the current frame rate
     private frameTime = 0;
     private frameCount = 0;
     private frameRate = new Component(0);
 
     constructor(storage: StorageDevice) {
-        storage.bind("gd", this.gold);
-        storage.bind("in", this.income);
-        storage.bind("il", this.incomeLevel);
-        storage.bind("up", this.upgradeIncomePrice);
-        storage.bind("gp", this.goldPerClick);
-        storage.bind("cl", this.clickLevel);
-        storage.bind("cp", this.upgradeClickPrice);
+        storage.bindCmp("gd", this.gold);
 
-        storage.bind("tg", this.totalGoldEarned);
-        storage.bind("tm", this.totalGoldMined);
-        storage.bind("tc", this.totalClicks);
-        storage.bind("tt", this.totalTimePlayed);
+        storage.bind("cp", data => {
+            data >>>= 0;
+            while (data-- > 0) {
+                this.tryUpgradeIncome(true);
+            }
+        }, () => this.incomeLevel.val);
+        storage.bind("il", data => {
+            data >>>= 0;
+            while (data-- > 0) {
+                this.tryUpgradeClick(true);
+            }
+        }, () => this.clickLevel.val);
+
+        storage.bindCmp("tg", this.totalGoldEarned);
+        storage.bindCmp("tm", this.totalGoldMined);
+        storage.bindCmp("tc", this.totalClicks);
+        storage.bindCmp("tt", this.totalTimePlayed);
 
         // VVVVV Needs work! VVVVV
         this.gold.addValueListener(() => {
             $.id("upgrade-income-button").style.backgroundColor
-                = (this.gold.val >= this.upgradeIncomePrice.val) ? "#33cc33" : "#ee2222";
+                = (this.gold.val >= this.incomeUpgradePrice.val) ? "#33cc33" : "#ee2222";
         });
         this.gold.addValueListener(() => {
             $.id("upgrade-click-button").style.backgroundColor
-                = (this.gold.val >= this.upgradeClickPrice.val) ? "#33cc33" : "#ee2222";
+                = (this.gold.val >= this.clickUpgradePrice.val) ? "#33cc33" : "#ee2222";
         });
 
         $.id("gold-mine").addEventListener("click", () => this.clickGoldMine());
-        $.id("upgrade-income-button").addEventListener("click", () => this.tryUpgradeIncome());
-        $.id("upgrade-click-button").addEventListener("click", () => this.tryUpgradeClick());
+        $.id("upgrade-income-button").addEventListener("click", () => this.tryUpgradeIncome(false));
+        $.id("upgrade-click-button").addEventListener("click", () => this.tryUpgradeClick(false));
     }
 
     private earnGold(value: number): void {
@@ -83,31 +90,31 @@ class Game {
     /**
      * Upgrades the player's passive income, if he has enough gold.
      */
-    private tryUpgradeIncome(): void {
-        if (this.gold.val < this.upgradeIncomePrice.val) {
+    private tryUpgradeIncome(forFree: boolean): void {
+        if (!forFree && this.gold.val < this.incomeUpgradePrice.val) {
             // Not enough gold
             return;
         }
 
-        this.gold.val -= this.upgradeIncomePrice.val;
-        this.income.val++;
+        this.gold.val -= this.incomeUpgradePrice.val;
+        this.income.val = Math.floor(this.income.val*1.1 + 1);
         this.incomeLevel.val++;
-        this.upgradeIncomePrice.val *= 1.2;
+        this.incomeUpgradePrice.val *= 1.2;
     }
 
     /**
      * Upgrades the player's gold per click, if he has enough gold.
      */
-    private tryUpgradeClick(): void {
-        if (this.gold.val < this.upgradeClickPrice.val) {
+    private tryUpgradeClick(forFree: boolean): void {
+        if (!forFree && this.gold.val < this.clickUpgradePrice.val) {
             // Not enough gold
             return;
         }
 
-        this.gold.val -= this.upgradeClickPrice.val;
-        this.goldPerClick.val++;
+        this.gold.val -= this.clickUpgradePrice.val;
+        this.goldPerClick.val = Math.floor(this.goldPerClick.val*1.1 + 1);
         this.clickLevel.val++;
-        this.upgradeClickPrice.val *= 1.2;
+        this.clickUpgradePrice.val *= 1.2;
     }
 
     public update(elapsedMS: number): void {

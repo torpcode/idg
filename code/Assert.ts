@@ -2,6 +2,12 @@
  * Contains assertion methods for verifying conditions.
  */
 module Assert {
+    export function is(value: any): void {
+        if (value !== true) {
+            fail("Expected value to be true.");
+        }
+    }
+
     /**
      * Assert that a value is `truthy`.
      * @see {@link https://developer.mozilla.org/en-US/docs/Glossary/Truthy}
@@ -22,7 +28,7 @@ module Assert {
         }
     }
 
-    function fail(errorMessage: string): void {
+    export function fail(errorMessage?: string): void {
         throw new Error("Assertion error: " + errorMessage);
     }
 }

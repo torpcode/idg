@@ -35,7 +35,7 @@
             autoSaveTimer += elapsedMS;
             if (autoSaveTimer >= 7000) {
                 autoSaveTimer = 0;
-                storage.save();
+                storage.saveCurrentState();
             }
 
             // Render
