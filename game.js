@@ -81,6 +81,9 @@ var $;
  */
 var Assert;
 (function (Assert) {
+    /**
+     * Asserts that a value is a primitive boolean `true`.
+     */
     function is(value) {
         if (value !== true) {
             fail("Expected value to be true.");
@@ -88,7 +91,16 @@ var Assert;
     }
     Assert.is = is;
     /**
-     * Assert that a value is `truthy`.
+     * Asserts that a value is a primitive boolean `false`.
+     */
+    function not(value) {
+        if (value === true) {
+            fail("Expected value to be false.");
+        }
+    }
+    Assert.not = not;
+    /**
+     * Assert that a value is 'truthy'.
      * @see {@link https://developer.mozilla.org/en-US/docs/Glossary/Truthy}
      */
     function truthy(value) {
@@ -98,7 +110,7 @@ var Assert;
     }
     Assert.truthy = truthy;
     /**
-     * Asserts that a value is `falsy`.
+     * Asserts that a value is 'falsy'.
      * @see {@link https://developer.mozilla.org/en-US/docs/Glossary/Falsy}
      */
     function falsy(value) {
@@ -107,6 +119,9 @@ var Assert;
         }
     }
     Assert.falsy = falsy;
+    /**
+     * Throws an assertion error with the specified error message.
+     */
     function fail(errorMessage) {
         throw new Error("Assertion error: " + errorMessage);
     }
@@ -180,6 +195,8 @@ var Tooltip;
 (function (Tooltip) {
     // The element that will be used as the tooltip.
     var tooltipElem;
+    var visible = false;
+    var textGetter;
     /**
      * Attaches markup/text to appear as a tooltip besides the element when the cursor
      * hovers over it.
@@ -190,15 +207,21 @@ var Tooltip;
             init();
         }
         element.addEventListener("mouseover", function () {
+            Assert.not(visible);
+            visible = true;
             var bounds = element.getBoundingClientRect();
             tooltipElem.style.left = (bounds.right + 5) + "px";
             tooltipElem.style.top = bounds.top + "px";
             tooltipElem.innerHTML = htmlText;
             tooltipElem.style.display = "block";
+            textGetter = null;
         });
         element.addEventListener("mouseout", function () {
+            Assert.is(visible);
+            visible = false;
             tooltipElem.style.display = "none";
             tooltipElem.innerHTML = "";
+            textGetter = null;
         });
     }
     Tooltip.attachText = attachText;
@@ -214,21 +237,33 @@ var Tooltip;
             init();
         }
         element.addEventListener("mouseover", function () {
+            Assert.not(visible);
+            visible = true;
             var bounds = element.getBoundingClientRect();
             tooltipElem.style.left = (bounds.right + 5) + "px";
             tooltipElem.style.top = bounds.top + "px";
             tooltipElem.innerHTML = htmlTextGetter();
             tooltipElem.style.display = "block";
+            textGetter = htmlTextGetter;
         });
         element.addEventListener("mouseout", function () {
+            Assert.is(visible);
+            visible = false;
             tooltipElem.style.display = "none";
             tooltipElem.innerHTML = "";
+            textGetter = null;
         });
     }
     Tooltip.attachFunc = attachFunc;
     function init() {
         tooltipElem = $.id("tooltip");
     }
+    function update() {
+        if (visible && textGetter) {
+            tooltipElem.innerHTML = textGetter();
+        }
+    }
+    Tooltip.update = update;
 })(Tooltip || (Tooltip = {}));
 var Display;
 (function (Display) {
@@ -543,13 +578,13 @@ var Game = (function () {
         storage.bindCmp("gd", this.gold);
         storage.bind("cp", function (data) {
             data >>>= 0;
-            while (data-- > 0) {
+            while (data-- > 1) {
                 _this.tryUpgradeIncome(true);
             }
         }, function () { return _this.incomeLevel.val; });
         storage.bind("il", function (data) {
             data >>>= 0;
-            while (data-- > 0) {
+            while (data-- > 1) {
                 _this.tryUpgradeClick(true);
             }
         }, function () { return _this.clickLevel.val; });
@@ -588,11 +623,13 @@ var Game = (function () {
      * Upgrades the player's passive income, if he has enough gold.
      */
     Game.prototype.tryUpgradeIncome = function (forFree) {
-        if (!forFree && this.gold.val < this.incomeUpgradePrice.val) {
-            // Not enough gold
-            return;
+        if (!forFree) {
+            if (this.gold.val < this.incomeUpgradePrice.val) {
+                // Not enough gold
+                return;
+            }
+            this.gold.val -= this.incomeUpgradePrice.val;
         }
-        this.gold.val -= this.incomeUpgradePrice.val;
         this.income.val = Math.floor(this.income.val * 1.1 + 1);
         this.incomeLevel.val++;
         this.incomeUpgradePrice.val *= 1.2;
@@ -601,11 +638,13 @@ var Game = (function () {
      * Upgrades the player's gold per click, if he has enough gold.
      */
     Game.prototype.tryUpgradeClick = function (forFree) {
-        if (!forFree && this.gold.val < this.clickUpgradePrice.val) {
-            // Not enough gold
-            return;
+        if (!forFree) {
+            if (this.gold.val < this.clickUpgradePrice.val) {
+                // Not enough gold
+                return;
+            }
+            this.gold.val -= this.clickUpgradePrice.val;
         }
-        this.gold.val -= this.clickUpgradePrice.val;
         this.goldPerClick.val = Math.floor(this.goldPerClick.val * 1.1 + 1);
         this.clickLevel.val++;
         this.clickUpgradePrice.val *= 1.2;
@@ -709,6 +748,7 @@ var AchievementTracker = (function () {
         view.parseHtml();
         view = null; // No more use of the view object
         // Start the game loop at 30 fps
+        var tooltipTimer = 0;
         var autoSaveTimer = 0;
         var lastTick = Date.now();
         setInterval(function () {
@@ -723,6 +763,12 @@ var AchievementTracker = (function () {
             if (autoSaveTimer >= 7000) {
                 autoSaveTimer = 0;
                 storage.saveCurrentState();
+            }
+            // Update the tooltip twice a second
+            tooltipTimer += elapsedMS;
+            if (tooltipTimer >= 500) {
+                tooltipTimer = 0;
+                Tooltip.update();
             }
             // Render
             Display.render();

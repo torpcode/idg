@@ -39,13 +39,13 @@ class Game {
 
         storage.bind("cp", data => {
             data >>>= 0;
-            while (data-- > 0) {
+            while (data-- > 1) {
                 this.tryUpgradeIncome(true);
             }
         }, () => this.incomeLevel.val);
         storage.bind("il", data => {
             data >>>= 0;
-            while (data-- > 0) {
+            while (data-- > 1) {
                 this.tryUpgradeClick(true);
             }
         }, () => this.clickLevel.val);
@@ -91,12 +91,14 @@ class Game {
      * Upgrades the player's passive income, if he has enough gold.
      */
     private tryUpgradeIncome(forFree: boolean): void {
-        if (!forFree && this.gold.val < this.incomeUpgradePrice.val) {
-            // Not enough gold
-            return;
+        if (!forFree) {
+            if (this.gold.val < this.incomeUpgradePrice.val) {
+                // Not enough gold
+                return;
+            }
+            this.gold.val -= this.incomeUpgradePrice.val;
         }
 
-        this.gold.val -= this.incomeUpgradePrice.val;
         this.income.val = Math.floor(this.income.val*1.1 + 1);
         this.incomeLevel.val++;
         this.incomeUpgradePrice.val *= 1.2;
@@ -106,12 +108,14 @@ class Game {
      * Upgrades the player's gold per click, if he has enough gold.
      */
     private tryUpgradeClick(forFree: boolean): void {
-        if (!forFree && this.gold.val < this.clickUpgradePrice.val) {
-            // Not enough gold
-            return;
+        if (!forFree) {
+            if (this.gold.val < this.clickUpgradePrice.val) {
+                // Not enough gold
+                return;
+            }
+            this.gold.val -= this.clickUpgradePrice.val;
         }
 
-        this.gold.val -= this.clickUpgradePrice.val;
         this.goldPerClick.val = Math.floor(this.goldPerClick.val*1.1 + 1);
         this.clickLevel.val++;
         this.clickUpgradePrice.val *= 1.2;

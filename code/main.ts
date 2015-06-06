@@ -20,6 +20,7 @@
         view = null; // No more use of the view object
 
         // Start the game loop at 30 fps
+        let tooltipTimer = 0;
         let autoSaveTimer = 0;
         let lastTick = Date.now();
         setInterval(function (): void {
@@ -36,6 +37,13 @@
             if (autoSaveTimer >= 7000) {
                 autoSaveTimer = 0;
                 storage.saveCurrentState();
+            }
+
+            // Update the tooltip twice a second
+            tooltipTimer += elapsedMS;
+            if (tooltipTimer >= 500) {
+                tooltipTimer = 0;
+                Tooltip.update();
             }
 
             // Render

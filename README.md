@@ -1,14 +1,2 @@
-Will become a heading
+Welp, it appears to be shaping up as some sort of 'idle' game.
 ==============
-
-Will become a sub heading
---------------
-
-*This will be Italic*
-
-**This will be Bold**
-
-- This will be a list item
-- This will be a list item
-
-    Add a indent and this will end up as code
