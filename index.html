@@ -30,10 +30,18 @@
 </div>
 <div>Price: <span mk-value="game.upgradeClickPrice">?</span> gold</div>
 
+<h1>Achievements</h1>
+<div id="achievement-container">
+</div>
+
 <h1>Statistics</h1>
 <div>Total gold earned: <span mk-value="game.totalGoldEarned">?</span></div>
 <div>Total clicks: <span mk-value="game.totalClicks"></span></div>
+<div>Achievements unlocked: <span mk-value="achievements.totalUnlocked">?</span>/<span mk-value="achievements.totalAchievements">?</span></div>
 <div>Total time played: <span mk-value="game.totalTimePlayed">?</span></div>
+
+<!-- An element that will be used as a custom tooltip -->
+<div id="tooltip"></div>
 
 </body>
 </html>

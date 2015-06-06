@@ -13,12 +13,15 @@ type ValueFormatter = (value: number) => string;
  */
 class Component {
     private _value: number;
+    private maxValueReached: number;
     private elements: HTMLElement[];
     private valueListeners: ValueListener[];
     private formatter: ValueFormatter;
+    private milestoneListeners: { value: number, listener: ()=>void }[];
 
     constructor(initValue: number, formatter?: ValueFormatter) {
         this._value = initValue;
+        this.maxValueReached = initValue;
 
         if (formatter) {
             this.formatter = formatter;
@@ -41,7 +44,8 @@ class Component {
             return;
         }
         this._value = value;
-        this.invokeValueListeners();
+        this.invokeValueListeners(value);
+        this.checkMaxValue(value);
         this.render();
     }
 
@@ -64,16 +68,50 @@ class Component {
     /**
      * Invoke all the value listeners.
      */
-    private invokeValueListeners(): void {
+    private invokeValueListeners(value: number): void {
         const listeners = this.valueListeners;
         if (!listeners) {
             // No listeners
             return;
         }
 
-        const value = this._value;
         for (let i = 0; i < listeners.length; i++) {
             listeners[i](value);
+        }
+    }
+
+    /**
+     * Checks if a new maximum value has been reached, and potentially invokes the appropriate listeners.
+     */
+    private checkMaxValue(value: number): void {
+        // Check if a new max value has been reached
+        if (value > this.maxValueReached) {
+            // Remember new max value
+            this.maxValueReached = value;
+
+            // Invoke appropriate listeners
+            const listeners = this.milestoneListeners;
+            if (listeners) {
+                while (listeners.length > 0) {
+                    var entry = listeners[listeners.length - 1];
+
+                    if (entry.value > value) {
+                        // Entry value is too large; so there's no point
+                        // of checking further since the listener array
+                        // is sorted in ascending order, thus consecutive
+                        // values will only be larger.
+                        break;
+                    }
+
+                    // The listener must be removed before it is invoked.
+                    // If the listener is invoked before it is removed, a
+                    // endless recursion might occur if the listener sets
+                    // the value of the component.
+                    listeners.pop();
+                    // Now the listener can be safely invoked.
+                    entry.listener();
+                }
+            }
         }
     }
 
@@ -87,7 +125,7 @@ class Component {
             return formatter(this._value);
         } else {
             // Default formatting
-            return "" + Math.floor(this._value*10)/10;
+            return $.commify(this._value);
         }
     }
 
@@ -110,7 +148,7 @@ class Component {
     }
 
     /**
-     * Attach a listener to this component. The listener will be invoked whenever the value of the component changes.
+     * Attach a listener to the component. The listener will be invoked whenever the value of the component changes.
      */
     public addValueListener(listener: ValueListener): void {
         if (!this.valueListeners) {
@@ -122,5 +160,51 @@ class Component {
         listener(this._value);
 
         this.valueListeners.push(listener);
+    }
+
+    /**
+     * Attaches a listener to the component that will be invoked when the value of the component reaches/passes
+     * the specified threshold value. The listener will be invoked only once, on the first time when the
+     * threshold is reached. If the threshold has been previously reached by the component the listener will
+     * be invoked immediately.
+     */
+    public whenReached(value: number, listener: ()=>void): void {
+        if (this.maxValueReached >= value) {
+            // Value has been previously reached, so
+            // just invoke the listener immediately
+            // and be done with it.
+            listener();
+            return;
+        }
+
+        var entry = {value, listener};
+
+        var listeners = this.milestoneListeners;
+        if (!listeners) {
+            // Create the listener array when a listener
+            // is added for the first time.
+            this.milestoneListeners = [entry];
+            return
+        }
+
+        // Find insert index to keep array sorted by value from
+        // largest to smallest.
+        var insertAt = -1;
+        for (var i = 0; i < listeners.length; i++) {
+            if (value > listeners[i].value) {
+                insertAt = i;
+                break;
+            }
+        }
+        // Note: Binary search could potentially be used,
+        // but a single component isn't expected to have a
+        // large amount of listeners, so this should suffice.
+
+        // Insert into the correct index to keep the array sorted by value
+        if (insertAt === -1) {
+            listeners.push(entry);
+        } else {
+            listeners.splice(insertAt, 0, entry);
+        }
     }
 }

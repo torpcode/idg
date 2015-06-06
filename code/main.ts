@@ -11,9 +11,11 @@
         const storage = new StorageDevice("idg_save_data");
 
         const game = new Game(storage);
+        const achievements = new AchievementTracker(game);
 
         let view = new HtmlView();
         view.define("game", game);
+        view.define("achievements", achievements);
         view.parseHtml();
         view = null; // No more use of the view object
 

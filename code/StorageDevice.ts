@@ -28,7 +28,6 @@ class StorageDevice {
             return;
         }
 
-        console.log("Data loaded: ", data);
         this.loadedData = data;
     }
 

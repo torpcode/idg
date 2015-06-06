@@ -40,11 +40,39 @@ module $ {
         // hours
         ms /= 60;
         let HH: any = Math.floor(ms%24);
-        if (HH < 10) HH = "0" + HH;
         // days
         ms /= 24;
         const days: any = Math.floor(ms%24);
 
-        return `${days} days, ${HH}:${MM}:${SS}`;
+        if (days > 0) {
+            return `${days} days, ${HH}:${MM}:${SS}`;
+        } else {
+            return `${HH}:${MM}:${SS}`;
+        }
+    }
+
+    // A RegExp object used to add commas to numeric strings
+    const COMMIFY_REGEX = /\B(?=(\d{3})+(?!\d))/g;
+
+    /**
+     * Floors and adds commas to a number.
+     */
+    export function commify(value: number): string {
+        // TODO: Improve documentation and handle edge cases more elegantly.
+
+        if (typeof value !== "number") {
+            // Hopefully this never happens
+            return "Bad Number";
+        }
+
+        value = Math.floor(value*10)/10;
+        // Commas not needed for numbers with
+        // less than four integer digits.
+        if (value > 1000 && value < 1000) {
+            return "" + value;
+        }
+
+        // Add commas to number
+        return ("" + value).replace(COMMIFY_REGEX, ",");
     }
 }

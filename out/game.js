@@ -41,14 +41,38 @@ var $;
         // hours
         ms /= 60;
         var HH = Math.floor(ms % 24);
-        if (HH < 10)
-            HH = "0" + HH;
         // days
         ms /= 24;
         var days = Math.floor(ms % 24);
-        return days + " days, " + HH + ":" + MM + ":" + SS;
+        if (days > 0) {
+            return days + " days, " + HH + ":" + MM + ":" + SS;
+        }
+        else {
+            return HH + ":" + MM + ":" + SS;
+        }
     }
     $.timeSpan = timeSpan;
+    // A RegExp object used to add commas to numeric strings
+    var COMMIFY_REGEX = /\B(?=(\d{3})+(?!\d))/g;
+    /**
+     * Floors and adds commas to a number.
+     */
+    function commify(value) {
+        // TODO: Improve documentation and handle edge cases more elegantly.
+        if (typeof value !== "number") {
+            // Hopefully this never happens
+            return "Bad Number";
+        }
+        value = Math.floor(value * 10) / 10;
+        // Commas not needed for numbers with
+        // less than four integer digits.
+        if (value > 1000 && value < 1000) {
+            return "" + value;
+        }
+        // Add commas to number
+        return ("" + value).replace(COMMIFY_REGEX, ",");
+    }
+    $.commify = commify;
 })($ || ($ = {}));
 /**
  * An object that simplifies saving and loading game data.
@@ -73,7 +97,6 @@ var StorageDevice = (function () {
             // Data is corrupt?
             return;
         }
-        console.log("Data loaded: ", data);
         this.loadedData = data;
     };
     StorageDevice.prototype.bind = function (key, cmp) {
@@ -113,6 +136,57 @@ var StorageDevice = (function () {
     };
     return StorageDevice;
 })();
+/**
+ * A mechanism for using an HTML element as a custom tooltip.
+ */
+var Tooltip;
+(function (Tooltip) {
+    // The element that will be used as the tooltip.
+    var tooltipElem;
+    /**
+     * Attaches markup/text to appear as a tooltip besides the element when the user's cursor
+     * hovers over it.
+     */
+    function attachText(element, htmlText) {
+        if (!tooltipElem) {
+            // Init on first use
+            init();
+        }
+        element.addEventListener("mouseover", function () {
+            var bounds = element.getBoundingClientRect();
+            tooltipElem.style.left = (bounds.right + 5) + "px";
+            tooltipElem.style.top = bounds.top + "px";
+            tooltipElem.innerHTML = htmlText;
+            tooltipElem.style.display = "block";
+        });
+        element.addEventListener("mouseout", function () {
+            tooltipElem.style.display = "none";
+            tooltipElem.innerHTML = "";
+        });
+    }
+    Tooltip.attachText = attachText;
+    function attachFunc(element, htmlTextGetter) {
+        if (!tooltipElem) {
+            // Init on first use
+            init();
+        }
+        element.addEventListener("mouseover", function () {
+            var bounds = element.getBoundingClientRect();
+            tooltipElem.style.left = (bounds.right + 5) + "px";
+            tooltipElem.style.top = bounds.top + "px";
+            tooltipElem.innerHTML = htmlTextGetter();
+            tooltipElem.style.display = "block";
+        });
+        element.addEventListener("mouseout", function () {
+            tooltipElem.style.display = "none";
+            tooltipElem.innerHTML = "";
+        });
+    }
+    Tooltip.attachFunc = attachFunc;
+    function init() {
+        tooltipElem = $.id("tooltip");
+    }
+})(Tooltip || (Tooltip = {}));
 var HtmlView = (function () {
     function HtmlView() {
         this.definedObjects = Object.create(null);
@@ -163,6 +237,7 @@ var HtmlView = (function () {
 var Component = (function () {
     function Component(initValue, formatter) {
         this._value = initValue;
+        this.maxValueReached = initValue;
         if (formatter) {
             this.formatter = formatter;
         }
@@ -182,7 +257,8 @@ var Component = (function () {
                 return;
             }
             this._value = value;
-            this.invokeValueListeners();
+            this.invokeValueListeners(value);
+            this.checkMaxValue(value);
             this.render();
         },
         enumerable: true,
@@ -205,15 +281,45 @@ var Component = (function () {
     /**
      * Invoke all the value listeners.
      */
-    Component.prototype.invokeValueListeners = function () {
+    Component.prototype.invokeValueListeners = function (value) {
         var listeners = this.valueListeners;
         if (!listeners) {
             // No listeners
             return;
         }
-        var value = this._value;
         for (var i = 0; i < listeners.length; i++) {
             listeners[i](value);
+        }
+    };
+    /**
+     * Checks if a new maximum value has been reached, and potentially invokes the appropriate listeners.
+     */
+    Component.prototype.checkMaxValue = function (value) {
+        // Check if a new max value has been reached
+        if (value > this.maxValueReached) {
+            // Remember new max value
+            this.maxValueReached = value;
+            // Invoke appropriate listeners
+            var listeners = this.milestoneListeners;
+            if (listeners) {
+                while (listeners.length > 0) {
+                    var entry = listeners[listeners.length - 1];
+                    if (entry.value > value) {
+                        // Entry value is too large; so there's no point
+                        // of checking further since the listener array
+                        // is sorted in ascending order, thus consecutive
+                        // values will only be larger.
+                        break;
+                    }
+                    // The listener must be removed before it is invoked.
+                    // If the listener is invoked before it is removed, a
+                    // endless recursion might occur if the listener sets
+                    // the value of the component.
+                    listeners.pop();
+                    // Now the listener can be safely invoked.
+                    entry.listener();
+                }
+            }
         }
     };
     /**
@@ -227,7 +333,7 @@ var Component = (function () {
         }
         else {
             // Default formatting
-            return "" + Math.floor(this._value * 10) / 10;
+            return $.commify(this._value);
         }
     };
     /**
@@ -246,7 +352,7 @@ var Component = (function () {
         this.elements.push(element);
     };
     /**
-     * Attach a listener to this component. The listener will be invoked whenever the value of the component changes.
+     * Attach a listener to the component. The listener will be invoked whenever the value of the component changes.
      */
     Component.prototype.addValueListener = function (listener) {
         if (!this.valueListeners) {
@@ -256,6 +362,48 @@ var Component = (function () {
         // Invoke the listener immediately with the current value
         listener(this._value);
         this.valueListeners.push(listener);
+    };
+    /**
+     * Attaches a listener to the component that will be invoked when the value of the component reaches/passes
+     * the specified threshold value. The listener will be invoked only once, on the first time when the
+     * threshold is reached. If the threshold has been previously reached by the component the listener will
+     * be invoked immediately.
+     */
+    Component.prototype.whenReached = function (value, listener) {
+        if (this.maxValueReached >= value) {
+            // Value has been previously reached, so
+            // just invoke the listener immediately
+            // and be done with it.
+            listener();
+            return;
+        }
+        var entry = { value: value, listener: listener };
+        var listeners = this.milestoneListeners;
+        if (!listeners) {
+            // Create the listener array when a listener
+            // is added for the first time.
+            this.milestoneListeners = [entry];
+            return;
+        }
+        // Find insert index to keep array sorted by value from
+        // largest to smallest.
+        var insertAt = -1;
+        for (var i = 0; i < listeners.length; i++) {
+            if (value > listeners[i].value) {
+                insertAt = i;
+                break;
+            }
+        }
+        // Note: Binary search could potentially be used,
+        // but a single component isn't expected to have a
+        // large amount of listeners, so this should suffice.
+        // Insert into the correct index to keep the array sorted by value
+        if (insertAt === -1) {
+            listeners.push(entry);
+        }
+        else {
+            listeners.splice(insertAt, 0, entry);
+        }
     };
     return Component;
 })();
@@ -352,6 +500,69 @@ var Game = (function () {
     };
     return Game;
 })();
+/**
+ * Manages the state of the various achievements in the game.
+ */
+var AchievementTracker = (function () {
+    function AchievementTracker(game) {
+        this.totalUnlocked = new Component(0);
+        this.totalAchievements = new Component(0);
+        this.game = game;
+        this.createAchievements();
+    }
+    AchievementTracker.prototype.createAchievements = function () {
+        var game = this.game;
+        this.create("Gold Digger", "gold_coin.png", game["gold"], 1000, "Earn {$} gold.");
+        this.create("Alchemist's Bane", "transmute.png", game["gold"], 1e6, "Earn {$} gold.");
+        this.create("Longevity", "longevity.png", game["totalTimePlayed"], 5 * 3600 * 1000, "Play for {$}.", $.timeSpan);
+    };
+    AchievementTracker.prototype.create = function (name, icon, cmp, value, description, formatter) {
+        var _this = this;
+        // The state of the achievement
+        var isUnlocked = false;
+        if (!formatter) {
+            formatter = $.commify;
+        }
+        // Create the element representing the achievement
+        var element = document.createElement("div");
+        element.className = "achievement";
+        element.innerHTML = "<span class='achievement-mask'></span>";
+        element.style.backgroundImage = "url('resources/" + icon + "')";
+        $.id("achievement-container").appendChild(element);
+        // Show description in tooltip
+        description = description.replace("{$}", formatter(value));
+        Tooltip.attachFunc(element, function () {
+            // Text that appears in the tooltip of the achievement.
+            // Kinda messy, but works fine...
+            var progress;
+            if (isUnlocked) {
+                progress = "<div style=\"margin-top: 8px;color: #22cc22;\">Unlocked</div>";
+            }
+            else {
+                var pp = formatter(cmp.val) + " / " + formatter(value);
+                progress = "<div style=\"margin-top: 8px;color: #999999; font-size: 11px;\">Progress: " + pp + "</div>";
+            }
+            return ("<div style=\"margin-bottom: 6px; font-size: 16px; color: #ff7700;\">" + name + "</div>")
+                + ("<div style=\"font-size: 12px; color: #cccccc;\">" + description + "</div>")
+                + ("" + progress);
+        });
+        // Add listener to component
+        cmp.whenReached(value, function () {
+            // Add the unlocked achievement class
+            element.className += " achievement-unlocked";
+            // Clear the 'locked achievement' mask
+            element.innerHTML = "";
+            // Mark as unlocked
+            isUnlocked = true;
+            console.log("Achievement unlocked:", name);
+            // Increment unlocked achievement count
+            _this.totalUnlocked.val++;
+        });
+        // Increment total achievement count
+        this.totalAchievements.val++;
+    };
+    return AchievementTracker;
+})();
 (function () {
     window.addEventListener("load", main);
     /**
@@ -363,8 +574,10 @@ var Game = (function () {
         // the game later.
         var storage = new StorageDevice("idg_save_data");
         var game = new Game(storage);
+        var achievements = new AchievementTracker(game);
         var view = new HtmlView();
         view.define("game", game);
+        view.define("achievements", achievements);
         view.parseHtml();
         view = null; // No more use of the view object
         // Start the game loop at 30 fps
@@ -389,8 +602,10 @@ var Game = (function () {
 /// <reference path="define.ts" />
 /// <reference path="utils.ts" />
 /// <reference path="StorageDevice.ts" />
+/// <reference path="Tooltip.ts" />
 /// <reference path="HtmlView.ts" />
 /// <reference path="Component.ts" />
 /// <reference path="Game.ts" />
+/// <reference path="AchievementTracker.ts" />
 /// <reference path="main.ts" />
 //# sourceMappingURL=game.js.map
