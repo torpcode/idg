@@ -24,7 +24,7 @@ class StorageDevice {
         try {
             data = JSON.parse(data);
         } catch (ex) {
-            // Data is corrupt?
+            // Data found, but is corrupt?
             return;
         }
 

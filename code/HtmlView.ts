@@ -1,3 +1,6 @@
+/**
+ * A simple MVC tool for to link the HTML with the game stuff.
+ */
 class HtmlView {
     private definedObjects: any = Object.create(null);
 

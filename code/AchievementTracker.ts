@@ -14,8 +14,9 @@ class AchievementTracker {
 
     private createAchievements(): void {
         const game = this.game;
-        this.create("Gold Digger", "gold_coin.png", game["gold"], 1000, "Earn {$} gold.");
-        this.create("Alchemist's Bane", "transmute.png", game["gold"], 1e6, "Earn {$} gold.");
+        this.create("Gold Digger", "gold_coin.png", game["totalGoldEarned"], 1e4, "Earn {$} gold.");
+        this.create("Golden Touch", "golden_touch.png", game["totalGoldMined"], 1e5, "Mine {$} gold by clicking on the gold mine.");
+        this.create("Alchemist's Bane", "transmute.png", game["totalGoldEarned"], 1e6, "Earn {$} gold.");
         this.create("Longevity", "longevity.png", game["totalTimePlayed"], 5*3600*1000, "Play for {$}.", $.timeSpan);
     }
 
@@ -35,18 +36,23 @@ class AchievementTracker {
         $.id("achievement-container").appendChild(element);
 
         // Show description in tooltip
-        description = description.replace("{$}", formatter(value));
+        description = description.replace("{$}", "<span style='color: #ff7700;'>" + formatter(value) + "</span>");
         Tooltip.attachFunc(element, () => {
             // Text that appears in the tooltip of the achievement.
             // Kinda messy, but works fine...
             let progress;
             if (isUnlocked) {
-                progress = `<div style="margin-top: 8px;color: #22cc22;">Unlocked</div>`;
+                progress = `<div style="font-size: 16px; margin-top: 8px;color: #22cc22;">Unlocked</div>`;
             } else {
                 let pp = formatter(cmp.val) + " / " + formatter(value);
-                progress = `<div style="margin-top: 8px;color: #999999; font-size: 11px;">Progress: ${pp}</div>`;
+                let pctWidth = (100*cmp.val/value);
+                progress = `<div style="margin-top: 8px;color: #999999; font-size: 11px;">Progress: ${pp}</div>`
+                    + `<div style="margin-top: 7px; height: 5px; background-color: #660000">`
+                        // Progress bar..? Seems to be sufficient for now.
+                    + `<div style="width: ${pctWidth}%; height: 100%; background-color: #228822;"></div>`
+                    + `</div>`;
             }
-            return `<div style="margin-bottom: 6px; font-size: 16px; color: #ff7700;">${name}</div>`
+            return `<div style="margin-bottom: 8px; font-size: 18px; color: #ff7700;">${name}</div>`
                 + `<div style="font-size: 12px; color: #cccccc;">${description}</div>`
                 + `${progress}`;
         });

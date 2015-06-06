@@ -21,7 +21,7 @@ module $ {
     }
 
     /**
-     * Converts a time span of milliseconds into a string representation in the format of: `D days, HH:MM:SS`.
+     * Converts a time span of milliseconds into a string representation in the format of: `(D days, )HH:MM:SS`.
      */
     export function timeSpan(ms: number): string {
         if (typeof ms !== "number" || ms < 0 || ms === 1/0 || ms !== ms) {
@@ -61,8 +61,10 @@ module $ {
         // TODO: Improve documentation and handle edge cases more elegantly.
 
         if (typeof value !== "number") {
-            // Hopefully this never happens
-            return "Bad Number";
+            // Hopefully this never happens, but if it does
+            // return a value different from "NaN" to make
+            // it more obvious what has happened.
+            return "Invalid number";
         }
 
         value = Math.floor(value*10)/10;

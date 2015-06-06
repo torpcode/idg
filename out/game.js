@@ -21,7 +21,7 @@ var $;
     }
     $.id = id;
     /**
-     * Converts a time span of milliseconds into a string representation in the format of: `D days, HH:MM:SS`.
+     * Converts a time span of milliseconds into a string representation in the format of: `(D days, )HH:MM:SS`.
      */
     function timeSpan(ms) {
         if (typeof ms !== "number" || ms < 0 || ms === 1 / 0 || ms !== ms) {
@@ -60,8 +60,10 @@ var $;
     function commify(value) {
         // TODO: Improve documentation and handle edge cases more elegantly.
         if (typeof value !== "number") {
-            // Hopefully this never happens
-            return "Bad Number";
+            // Hopefully this never happens, but if it does
+            // return a value different from "NaN" to make
+            // it more obvious what has happened.
+            return "Invalid number";
         }
         value = Math.floor(value * 10) / 10;
         // Commas not needed for numbers with
@@ -94,7 +96,7 @@ var StorageDevice = (function () {
             data = JSON.parse(data);
         }
         catch (ex) {
-            // Data is corrupt?
+            // Data found, but is corrupt?
             return;
         }
         this.loadedData = data;
@@ -144,7 +146,7 @@ var Tooltip;
     // The element that will be used as the tooltip.
     var tooltipElem;
     /**
-     * Attaches markup/text to appear as a tooltip besides the element when the user's cursor
+     * Attaches markup/text to appear as a tooltip besides the element when the cursor
      * hovers over it.
      */
     function attachText(element, htmlText) {
@@ -165,6 +167,12 @@ var Tooltip;
         });
     }
     Tooltip.attachText = attachText;
+    /**
+     * Attaches a function that returns markup/text to appear as a tooltip besides the
+     * element when the cursor hovers over it. This should be used instead of `attachText()`
+     * when the content of the tooltip is dynamic and may change, as the function will
+     * be invoked each time the tooltip is shown.
+     */
     function attachFunc(element, htmlTextGetter) {
         if (!tooltipElem) {
             // Init on first use
@@ -187,6 +195,9 @@ var Tooltip;
         tooltipElem = $.id("tooltip");
     }
 })(Tooltip || (Tooltip = {}));
+/**
+ * A simple MVC tool for to link the HTML with the game stuff.
+ */
 var HtmlView = (function () {
     function HtmlView() {
         this.definedObjects = Object.create(null);
@@ -427,8 +438,10 @@ var Game = (function () {
         this.clickLevel = new Component(1);
         // Amount of gold required to upgrade the gold per click to the next level.
         this.upgradeClickPrice = new Component(10);
-        // Total amount of gold earned throughout the game.
+        // Total amount of gold earned throughout the game (from all sources).
         this.totalGoldEarned = new Component(0);
+        // Total amount of gold earned exclusively by clicking the gold mine.
+        this.totalGoldMined = new Component(0);
         // Total number of times the player has clicked the gold mine.
         this.totalClicks = new Component(0);
         // Total time that has been accounted for by the game loop.
@@ -442,6 +455,7 @@ var Game = (function () {
         storage.bind("cl", this.clickLevel);
         storage.bind("cp", this.upgradeClickPrice);
         storage.bind("tg", this.totalGoldEarned);
+        storage.bind("tm", this.totalGoldMined);
         storage.bind("tc", this.totalClicks);
         storage.bind("tt", this.totalTimePlayed);
         this.gold.addValueListener(function () {
@@ -465,7 +479,9 @@ var Game = (function () {
      * Invoked when the player clicks the gold mine.
      */
     Game.prototype.clickGoldMine = function () {
-        this.earnGold(this.goldPerClick.val);
+        var income = this.goldPerClick.val;
+        this.earnGold(income);
+        this.totalGoldMined.val += income;
         this.totalClicks.val++;
     };
     /**
@@ -512,8 +528,9 @@ var AchievementTracker = (function () {
     }
     AchievementTracker.prototype.createAchievements = function () {
         var game = this.game;
-        this.create("Gold Digger", "gold_coin.png", game["gold"], 1000, "Earn {$} gold.");
-        this.create("Alchemist's Bane", "transmute.png", game["gold"], 1e6, "Earn {$} gold.");
+        this.create("Gold Digger", "gold_coin.png", game["totalGoldEarned"], 1e4, "Earn {$} gold.");
+        this.create("Golden Touch", "golden_touch.png", game["totalGoldMined"], 1e5, "Mine {$} gold by clicking on the gold mine.");
+        this.create("Alchemist's Bane", "transmute.png", game["totalGoldEarned"], 1e6, "Earn {$} gold.");
         this.create("Longevity", "longevity.png", game["totalTimePlayed"], 5 * 3600 * 1000, "Play for {$}.", $.timeSpan);
     };
     AchievementTracker.prototype.create = function (name, icon, cmp, value, description, formatter) {
@@ -530,19 +547,23 @@ var AchievementTracker = (function () {
         element.style.backgroundImage = "url('resources/" + icon + "')";
         $.id("achievement-container").appendChild(element);
         // Show description in tooltip
-        description = description.replace("{$}", formatter(value));
+        description = description.replace("{$}", "<span style='color: #ff7700;'>" + formatter(value) + "</span>");
         Tooltip.attachFunc(element, function () {
             // Text that appears in the tooltip of the achievement.
             // Kinda messy, but works fine...
             var progress;
             if (isUnlocked) {
-                progress = "<div style=\"margin-top: 8px;color: #22cc22;\">Unlocked</div>";
+                progress = "<div style=\"font-size: 16px; margin-top: 8px;color: #22cc22;\">Unlocked</div>";
             }
             else {
                 var pp = formatter(cmp.val) + " / " + formatter(value);
-                progress = "<div style=\"margin-top: 8px;color: #999999; font-size: 11px;\">Progress: " + pp + "</div>";
+                var pctWidth = (100 * cmp.val / value);
+                progress = ("<div style=\"margin-top: 8px;color: #999999; font-size: 11px;\">Progress: " + pp + "</div>")
+                    + "<div style=\"margin-top: 7px; height: 5px; background-color: #660000\">"
+                    + ("<div style=\"width: " + pctWidth + "%; height: 100%; background-color: #228822;\"></div>")
+                    + "</div>";
             }
-            return ("<div style=\"margin-bottom: 6px; font-size: 16px; color: #ff7700;\">" + name + "</div>")
+            return ("<div style=\"margin-bottom: 8px; font-size: 18px; color: #ff7700;\">" + name + "</div>")
                 + ("<div style=\"font-size: 12px; color: #cccccc;\">" + description + "</div>")
                 + ("" + progress);
         });

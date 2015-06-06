@@ -6,7 +6,7 @@ module Tooltip {
     let tooltipElem: HTMLElement;
 
     /**
-     * Attaches markup/text to appear as a tooltip besides the element when the user's cursor
+     * Attaches markup/text to appear as a tooltip besides the element when the cursor
      * hovers over it.
      */
     export function attachText(element: HTMLElement, htmlText: string): void {
@@ -29,6 +29,12 @@ module Tooltip {
         });
     }
 
+    /**
+     * Attaches a function that returns markup/text to appear as a tooltip besides the
+     * element when the cursor hovers over it. This should be used instead of `attachText()`
+     * when the content of the tooltip is dynamic and may change, as the function will
+     * be invoked each time the tooltip is shown.
+     */
     export function attachFunc(element: HTMLElement, htmlTextGetter: ()=>string): void {
         if (!tooltipElem) {
             // Init on first use

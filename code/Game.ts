@@ -19,8 +19,10 @@ class Game {
     // Amount of gold required to upgrade the gold per click to the next level.
     private upgradeClickPrice = new Component(10);
 
-    // Total amount of gold earned throughout the game.
+    // Total amount of gold earned throughout the game (from all sources).
     private totalGoldEarned = new Component(0);
+    // Total amount of gold earned exclusively by clicking the gold mine.
+    private totalGoldMined = new Component(0);
     // Total number of times the player has clicked the gold mine.
     private totalClicks = new Component(0);
     // Total time that has been accounted for by the game loop.
@@ -37,6 +39,7 @@ class Game {
         storage.bind("cp", this.upgradeClickPrice);
 
         storage.bind("tg", this.totalGoldEarned);
+        storage.bind("tm", this.totalGoldMined);
         storage.bind("tc", this.totalClicks);
         storage.bind("tt", this.totalTimePlayed);
 
@@ -66,7 +69,9 @@ class Game {
      * Invoked when the player clicks the gold mine.
      */
     private clickGoldMine(): void {
-        this.earnGold(this.goldPerClick.val);
+        const income = this.goldPerClick.val;
+        this.earnGold(income);
+        this.totalGoldMined.val += income;
         this.totalClicks.val++;
     }
 
