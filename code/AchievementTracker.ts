@@ -15,7 +15,7 @@ class AchievementTracker {
     private createAchievements(): void {
         const game = this.game;
         this.create("Gold Digger", "gold_coin.png", game["totalGoldEarned"], 1e4, "Earn {$} gold.");
-        this.create("Golden Touch", "golden_touch.png", game["totalGoldMined"], 1e5, "Mine {$} gold by clicking on the gold mine.");
+        this.create("Golden Touch", "golden_touch.png", game["totalGoldMined"], 1e4, "Mine {$} gold by clicking on the gold mine.");
         this.create("Alchemist's Bane", "transmute.png", game["totalGoldEarned"], 1e6, "Earn {$} gold.");
         this.create("Longevity", "longevity.png", game["totalTimePlayed"], 5*3600*1000, "Play for {$}.", $.timeSpan);
     }
@@ -46,10 +46,10 @@ class AchievementTracker {
             } else {
                 let pp = formatter(cmp.val) + " / " + formatter(value);
                 let pctWidth = (100*cmp.val/value);
-                progress = `<div style="margin-top: 8px;color: #999999; font-size: 11px;">Progress: ${pp}</div>`
-                    + `<div style="margin-top: 7px; height: 5px; background-color: #660000">`
+                progress = `<div style="margin-top: 8px;color: #999999; font-size: 11px;">Progress: [${Math.floor(pctWidth)}%]&nbsp;&nbsp;${pp}</div>`
+                    + `<div style="margin-top: 7px; height: 5px; background-color: #770000">`
                         // Progress bar..? Seems to be sufficient for now.
-                    + `<div style="width: ${pctWidth}%; height: 100%; background-color: #228822;"></div>`
+                    + `<div style="width: ${pctWidth}%; height: 100%; background-color: #229922;"></div>`
                     + `</div>`;
             }
             return `<div style="margin-bottom: 8px; font-size: 18px; color: #ff7700;">${name}</div>`
