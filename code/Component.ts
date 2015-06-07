@@ -48,6 +48,7 @@ class Component implements DisplayNode {
             return;
         }
         this._value = value;
+
         this.invokeValueListeners(value);
         this.checkMaxValue(value);
 

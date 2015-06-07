@@ -36,6 +36,10 @@ class Game {
 
     constructor(storage: StorageDevice) {
         storage.bindCmp("gd", this.gold);
+        storage.bindCmp("tg", this.totalGoldEarned);
+        storage.bindCmp("tm", this.totalGoldMined);
+        storage.bindCmp("tc", this.totalClicks);
+        storage.bindCmp("tt", this.totalTimePlayed);
 
         storage.bind("cp", data => {
             data >>>= 0;
@@ -50,20 +54,20 @@ class Game {
             }
         }, () => this.clickLevel.val);
 
-        storage.bindCmp("tg", this.totalGoldEarned);
-        storage.bindCmp("tm", this.totalGoldMined);
-        storage.bindCmp("tc", this.totalClicks);
-        storage.bindCmp("tt", this.totalTimePlayed);
-
         // VVVVV Needs work! VVVVV
-        this.gold.addValueListener(() => {
+        const upgIncomeBtn = new Button("upgrade-income-button", "#33cc33", "#ee2222");
+        this.gold.addValueListener(() => upgIncomeBtn.setState(this.gold.val >= this.incomeUpgradePrice.val));
+        const upgClickBtn = new Button("upgrade-click-button", "#33cc33", "#ee2222");
+        this.gold.addValueListener(() => upgClickBtn.setState(this.gold.val >= this.clickUpgradePrice.val));
+
+        /*this.gold.addValueListener(() => {
             $.id("upgrade-income-button").style.backgroundColor
                 = (this.gold.val >= this.incomeUpgradePrice.val) ? "#33cc33" : "#ee2222";
         });
         this.gold.addValueListener(() => {
             $.id("upgrade-click-button").style.backgroundColor
                 = (this.gold.val >= this.clickUpgradePrice.val) ? "#33cc33" : "#ee2222";
-        });
+        });*/
 
         $.id("gold-mine").addEventListener("click", () => this.clickGoldMine());
         $.id("upgrade-income-button").addEventListener("click", () => this.tryUpgradeIncome(false));

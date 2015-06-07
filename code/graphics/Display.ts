@@ -1,9 +1,6 @@
-interface DisplayNode {
-    isQueuedForRender: boolean;
-    nextQueued: DisplayNode;
-    render(): void;
-}
-
+/**
+ * Handles the rendering of the visual elements of the game.
+ */
 module Display {
     // The head and tail of a singly-linked-list structure
     // used internally to store display nodes queued for
@@ -11,6 +8,10 @@ module Display {
     let firstNode: DisplayNode,
         lastNode: DisplayNode;
 
+    /**
+     * Queues a DisplayNode to be rendered at the end of the current frame.
+     * This method is always `O(1)` runtime due to the linked-list-likeness of DisplayNodes.
+     */
     export function queueForRender(node: DisplayNode): void {
         if (node.isQueuedForRender) {
             // This node is already queued for rendering; there's
@@ -20,12 +21,12 @@ module Display {
         node.isQueuedForRender = true;
 
         if (!firstNode) {
-            Assert.falsy(lastNode);
             // Render queue is empty.
+            Assert.falsy(lastNode);
             firstNode = lastNode = node;
         } else {
-            Assert.truthy(lastNode);
             // Render queue is not empty.
+            Assert.truthy(lastNode);
             lastNode.nextQueued = node;
             lastNode = node;
         }
@@ -34,6 +35,9 @@ module Display {
         node.nextQueued = null;
     }
 
+    /**
+     * Renders all the DisplayNodes that are currently queued to be rendered.
+     */
     export function render(): void {
         // Render queued nodes
         let node = firstNode;

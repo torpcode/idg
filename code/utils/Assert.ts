@@ -41,6 +41,15 @@ module Assert {
     }
 
     /**
+     * Asserts that a value is a primitive boolean.
+     */
+    export function bool(value: any): void {
+        if (typeof value !== "boolean") {
+            fail("Expected value to be falsy.");
+        }
+    }
+
+    /**
      * Throws an assertion error with the specified error message.
      */
     export function fail(errorMessage?: string): void {

@@ -20,14 +20,10 @@ class AchievementTracker {
         this.create("Longevity", "longevity.png", game["totalTimePlayed"], 5*3600*1000, "Play for {$}.", $.timeSpan);
     }
 
+    /**
+     * Creates a new achievement.
+     */
     private create(name: string, icon: string, cmp: Component, value: number, description: string, formatter?: ValueFormatter): void {
-        // The state of the achievement
-        let isUnlocked = false;
-
-        if (!formatter) {
-            formatter = $.commify;
-        }
-
         // Create the element representing the achievement
         const element = document.createElement("div");
         element.className = "achievement";
@@ -35,6 +31,12 @@ class AchievementTracker {
         element.style.backgroundImage = `url('resources/${icon}')`;
         $.id("achievement-container").appendChild(element);
 
+        // The state of the achievement
+        let isUnlocked = false;
+        // Default formatter, if none was specified
+        if (!formatter) {
+            formatter = $.commify;
+        }
         // Show description in tooltip
         description = description.replace("{$}", "<span style='color: #ff7700;'>" + formatter(value) + "</span>");
         Tooltip.attachFunc(element, () => {
@@ -47,8 +49,8 @@ class AchievementTracker {
                 let pp = formatter(cmp.val) + " / " + formatter(value);
                 let pctWidth = (100*cmp.val/value);
                 progress = `<div style="margin-top: 8px;color: #999999; font-size: 11px;">Progress: [${Math.floor(pctWidth)}%]&nbsp;&nbsp;${pp}</div>`
-                    + `<div style="margin-top: 7px; height: 5px; background-color: #770000">`
                         // Progress bar..? Seems to be sufficient for now.
+                    + `<div style="margin-top: 7px; height: 5px; background-color: #770000">`
                     + `<div style="width: ${pctWidth}%; height: 100%; background-color: #229922;"></div>`
                     + `</div>`;
             }

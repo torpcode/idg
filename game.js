@@ -120,6 +120,15 @@ var Assert;
     }
     Assert.falsy = falsy;
     /**
+     * Asserts that a value is a primitive boolean.
+     */
+    function bool(value) {
+        if (typeof value !== "boolean") {
+            fail("Expected value to be falsy.");
+        }
+    }
+    Assert.bool = bool;
+    /**
      * Throws an assertion error with the specified error message.
      */
     function fail(errorMessage) {
@@ -127,67 +136,6 @@ var Assert;
     }
     Assert.fail = fail;
 })(Assert || (Assert = {}));
-/**
- * An object that simplifies saving and loading game data.
- */
-var StorageDevice = (function () {
-    function StorageDevice(storageKey) {
-        this.bindings = [];
-        this.storageKey = storageKey;
-        // Immediately load data from previous session (if such data exists)
-        this.tryLoadSession();
-    }
-    StorageDevice.prototype.tryLoadSession = function () {
-        var data = localStorage.getItem(this.storageKey);
-        if (!data) {
-            // Previous save doesn't exist
-            return;
-        }
-        try {
-            data = JSON.parse(data);
-        }
-        catch (ex) {
-            // Data found, but is corrupt?
-            return;
-        }
-        this.loadedData = data;
-    };
-    StorageDevice.prototype.bind = function (key, load, getSaveData) {
-        // Load data immediately, if there is
-        // any data matching the key.
-        var loadedData = this.loadedData;
-        if (loadedData) {
-            if (loadedData.hasOwnProperty(key)) {
-                load(loadedData[key]);
-            }
-        }
-        // Ensure that keys are unique, as duplicate keys
-        // will result in save data being overwriting.
-        var bindings = this.bindings;
-        for (var i = 0; i < bindings.length; i++) {
-            var b = bindings[i];
-            if (b.key === key) {
-                // Key collision
-                throw new Error("Binding keys for components must be unique.");
-            }
-        }
-        this.bindings.push({ key: key, getSaveData: getSaveData });
-    };
-    StorageDevice.prototype.bindCmp = function (key, cmp) {
-        this.bind(key, function (x) { return cmp.val; }, function () { return cmp.val; });
-    };
-    StorageDevice.prototype.saveCurrentState = function () {
-        // Populate an object with the required save data
-        var data = {};
-        var bindings = this.bindings;
-        for (var i = 0; i < bindings.length; i++) {
-            var b = bindings[i];
-            data[b.key] = b.getSaveData();
-        }
-        localStorage.setItem(this.storageKey, JSON.stringify(data));
-    };
-    return StorageDevice;
-})();
 /**
  * A mechanism for using an HTML element as a custom tooltip.
  */
@@ -265,12 +213,80 @@ var Tooltip;
     }
     Tooltip.update = update;
 })(Tooltip || (Tooltip = {}));
+/**
+ * An object that simplifies saving and loading game data.
+ */
+var StorageDevice = (function () {
+    function StorageDevice(storageKey) {
+        this.bindings = [];
+        this.storageKey = storageKey;
+        // Immediately load data from previous session (if such data exists)
+        this.tryLoadSession();
+    }
+    StorageDevice.prototype.tryLoadSession = function () {
+        var data = localStorage.getItem(this.storageKey);
+        if (!data) {
+            // Previous save doesn't exist
+            return;
+        }
+        try {
+            data = JSON.parse(data);
+        }
+        catch (ex) {
+            // Data found, but is corrupt?
+            return;
+        }
+        this.loadedData = data;
+    };
+    StorageDevice.prototype.bind = function (key, load, getSaveData) {
+        // Load data immediately, if there is
+        // any data matching the key.
+        var loadedData = this.loadedData;
+        if (loadedData) {
+            if (loadedData.hasOwnProperty(key)) {
+                load(loadedData[key]);
+            }
+        }
+        // Ensure that keys are unique, as duplicate keys
+        // will result in save data being overwriting.
+        var bindings = this.bindings;
+        for (var i = 0; i < bindings.length; i++) {
+            var b = bindings[i];
+            if (b.key === key) {
+                // Key collision
+                throw new Error("Binding keys for components must be unique.");
+            }
+        }
+        this.bindings.push({ key: key, getSaveData: getSaveData });
+    };
+    StorageDevice.prototype.bindCmp = function (key, cmp) {
+        this.bind(key, function (x) { return cmp.val; }, function () { return cmp.val; });
+    };
+    StorageDevice.prototype.saveCurrentState = function () {
+        // Populate an object with the required save data
+        var data = {};
+        var bindings = this.bindings;
+        for (var i = 0; i < bindings.length; i++) {
+            var b = bindings[i];
+            data[b.key] = b.getSaveData();
+        }
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+    };
+    return StorageDevice;
+})();
+/**
+ * Handles the rendering of the visual elements of the game.
+ */
 var Display;
 (function (Display) {
     // The head and tail of a singly-linked-list structure
     // used internally to store display nodes queued for
     // rendering.
     var firstNode, lastNode;
+    /**
+     * Queues a DisplayNode to be rendered at the end of the current frame.
+     * This method is always `O(1)` runtime due to the linked-list-likeness of DisplayNodes.
+     */
     function queueForRender(node) {
         if (node.isQueuedForRender) {
             // This node is already queued for rendering; there's
@@ -279,13 +295,13 @@ var Display;
         }
         node.isQueuedForRender = true;
         if (!firstNode) {
-            Assert.falsy(lastNode);
             // Render queue is empty.
+            Assert.falsy(lastNode);
             firstNode = lastNode = node;
         }
         else {
-            Assert.truthy(lastNode);
             // Render queue is not empty.
+            Assert.truthy(lastNode);
             lastNode.nextQueued = node;
             lastNode = node;
         }
@@ -293,6 +309,9 @@ var Display;
         node.nextQueued = null;
     }
     Display.queueForRender = queueForRender;
+    /**
+     * Renders all the DisplayNodes that are currently queued to be rendered.
+     */
     function render() {
         // Render queued nodes
         var node = firstNode;
@@ -357,6 +376,31 @@ var HtmlView = (function () {
         return cmp;
     };
     return HtmlView;
+})();
+var Button = (function () {
+    function Button(elementId, onColor, offColor) {
+        this.element = $.id(elementId);
+        this.onColor = onColor;
+        this.offColor = offColor;
+    }
+    Button.prototype.setState = function (state) {
+        Assert.bool(state);
+        if (state === this.state) {
+            // Same state
+            return;
+        }
+        this.state = state;
+        Display.queueForRender(this);
+    };
+    Button.prototype.render = function () {
+        if (this.state === this.renderedState) {
+            // State haven't changed since the last render,
+            // no need to re-render anything.
+            return;
+        }
+        this.element.style.backgroundColor = this.state ? this.onColor : this.offColor;
+    };
+    return Button;
 })();
 /**
  * An object which wraps a numeric value, ensuring it always stays valid.
@@ -543,6 +587,78 @@ var Component = (function () {
     return Component;
 })();
 /**
+ * Manages the state of the various achievements in the game.
+ */
+var AchievementTracker = (function () {
+    function AchievementTracker(game) {
+        this.totalUnlocked = new Component(0);
+        this.totalAchievements = new Component(0);
+        this.game = game;
+        this.createAchievements();
+    }
+    AchievementTracker.prototype.createAchievements = function () {
+        var game = this.game;
+        this.create("Gold Digger", "gold_coin.png", game["totalGoldEarned"], 1e4, "Earn {$} gold.");
+        this.create("Golden Touch", "golden_touch.png", game["totalGoldMined"], 1e4, "Mine {$} gold by clicking on the gold mine.");
+        this.create("Alchemist's Bane", "transmute.png", game["totalGoldEarned"], 1e6, "Earn {$} gold.");
+        this.create("Longevity", "longevity.png", game["totalTimePlayed"], 5 * 3600 * 1000, "Play for {$}.", $.timeSpan);
+    };
+    /**
+     * Creates a new achievement.
+     */
+    AchievementTracker.prototype.create = function (name, icon, cmp, value, description, formatter) {
+        var _this = this;
+        // Create the element representing the achievement
+        var element = document.createElement("div");
+        element.className = "achievement";
+        element.innerHTML = "<span class='achievement-mask'></span>";
+        element.style.backgroundImage = "url('resources/" + icon + "')";
+        $.id("achievement-container").appendChild(element);
+        // The state of the achievement
+        var isUnlocked = false;
+        // Default formatter, if none was specified
+        if (!formatter) {
+            formatter = $.commify;
+        }
+        // Show description in tooltip
+        description = description.replace("{$}", "<span style='color: #ff7700;'>" + formatter(value) + "</span>");
+        Tooltip.attachFunc(element, function () {
+            // Text that appears in the tooltip of the achievement.
+            // Kinda messy, but works fine...
+            var progress;
+            if (isUnlocked) {
+                progress = "<div style=\"font-size: 16px; margin-top: 8px; color: #22cc22;\">Unlocked</div>";
+            }
+            else {
+                var pp = formatter(cmp.val) + " / " + formatter(value);
+                var pctWidth = (100 * cmp.val / value);
+                progress = ("<div style=\"margin-top: 8px;color: #999999; font-size: 11px;\">Progress: [" + Math.floor(pctWidth) + "%]&nbsp;&nbsp;" + pp + "</div>")
+                    + "<div style=\"margin-top: 7px; height: 5px; background-color: #770000\">"
+                    + ("<div style=\"width: " + pctWidth + "%; height: 100%; background-color: #229922;\"></div>")
+                    + "</div>";
+            }
+            return ("<div style=\"margin-bottom: 8px; font-size: 18px; color: #ff7700;\">" + name + "</div>")
+                + ("<div style=\"font-size: 12px; color: #cccccc;\">" + description + "</div>")
+                + ("" + progress);
+        });
+        // Add listener to component
+        cmp.whenReached(value, function () {
+            // Add the unlocked achievement class
+            element.className += " achievement-unlocked";
+            // Clear the 'locked achievement' mask
+            element.innerHTML = "";
+            // Mark as unlocked
+            isUnlocked = true;
+            console.log("Achievement unlocked:", name);
+            // Increment unlocked achievement count
+            _this.totalUnlocked.val++;
+        });
+        // Increment total achievement count
+        this.totalAchievements.val++;
+    };
+    return AchievementTracker;
+})();
+/**
  * The main game class. Handles the overall state and timing of the game.
  */
 var Game = (function () {
@@ -576,6 +692,10 @@ var Game = (function () {
         this.frameCount = 0;
         this.frameRate = new Component(0);
         storage.bindCmp("gd", this.gold);
+        storage.bindCmp("tg", this.totalGoldEarned);
+        storage.bindCmp("tm", this.totalGoldMined);
+        storage.bindCmp("tc", this.totalClicks);
+        storage.bindCmp("tt", this.totalTimePlayed);
         storage.bind("cp", function (data) {
             data >>>= 0;
             while (data-- > 1) {
@@ -588,19 +708,19 @@ var Game = (function () {
                 _this.tryUpgradeClick(true);
             }
         }, function () { return _this.clickLevel.val; });
-        storage.bindCmp("tg", this.totalGoldEarned);
-        storage.bindCmp("tm", this.totalGoldMined);
-        storage.bindCmp("tc", this.totalClicks);
-        storage.bindCmp("tt", this.totalTimePlayed);
         // VVVVV Needs work! VVVVV
-        this.gold.addValueListener(function () {
+        var upgIncomeBtn = new Button("upgrade-income-button", "#33cc33", "#ee2222");
+        this.gold.addValueListener(function () { return upgIncomeBtn.setState(_this.gold.val >= _this.incomeUpgradePrice.val); });
+        var upgClickBtn = new Button("upgrade-click-button", "#33cc33", "#ee2222");
+        this.gold.addValueListener(function () { return upgClickBtn.setState(_this.gold.val >= _this.clickUpgradePrice.val); });
+        /*this.gold.addValueListener(() => {
             $.id("upgrade-income-button").style.backgroundColor
-                = (_this.gold.val >= _this.incomeUpgradePrice.val) ? "#33cc33" : "#ee2222";
+                = (this.gold.val >= this.incomeUpgradePrice.val) ? "#33cc33" : "#ee2222";
         });
-        this.gold.addValueListener(function () {
+        this.gold.addValueListener(() => {
             $.id("upgrade-click-button").style.backgroundColor
-                = (_this.gold.val >= _this.clickUpgradePrice.val) ? "#33cc33" : "#ee2222";
-        });
+                = (this.gold.val >= this.clickUpgradePrice.val) ? "#33cc33" : "#ee2222";
+        });*/
         $.id("gold-mine").addEventListener("click", function () { return _this.clickGoldMine(); });
         $.id("upgrade-income-button").addEventListener("click", function () { return _this.tryUpgradeIncome(false); });
         $.id("upgrade-click-button").addEventListener("click", function () { return _this.tryUpgradeClick(false); });
@@ -662,74 +782,6 @@ var Game = (function () {
     };
     return Game;
 })();
-/**
- * Manages the state of the various achievements in the game.
- */
-var AchievementTracker = (function () {
-    function AchievementTracker(game) {
-        this.totalUnlocked = new Component(0);
-        this.totalAchievements = new Component(0);
-        this.game = game;
-        this.createAchievements();
-    }
-    AchievementTracker.prototype.createAchievements = function () {
-        var game = this.game;
-        this.create("Gold Digger", "gold_coin.png", game["totalGoldEarned"], 1e4, "Earn {$} gold.");
-        this.create("Golden Touch", "golden_touch.png", game["totalGoldMined"], 1e4, "Mine {$} gold by clicking on the gold mine.");
-        this.create("Alchemist's Bane", "transmute.png", game["totalGoldEarned"], 1e6, "Earn {$} gold.");
-        this.create("Longevity", "longevity.png", game["totalTimePlayed"], 5 * 3600 * 1000, "Play for {$}.", $.timeSpan);
-    };
-    AchievementTracker.prototype.create = function (name, icon, cmp, value, description, formatter) {
-        var _this = this;
-        // The state of the achievement
-        var isUnlocked = false;
-        if (!formatter) {
-            formatter = $.commify;
-        }
-        // Create the element representing the achievement
-        var element = document.createElement("div");
-        element.className = "achievement";
-        element.innerHTML = "<span class='achievement-mask'></span>";
-        element.style.backgroundImage = "url('resources/" + icon + "')";
-        $.id("achievement-container").appendChild(element);
-        // Show description in tooltip
-        description = description.replace("{$}", "<span style='color: #ff7700;'>" + formatter(value) + "</span>");
-        Tooltip.attachFunc(element, function () {
-            // Text that appears in the tooltip of the achievement.
-            // Kinda messy, but works fine...
-            var progress;
-            if (isUnlocked) {
-                progress = "<div style=\"font-size: 16px; margin-top: 8px; color: #22cc22;\">Unlocked</div>";
-            }
-            else {
-                var pp = formatter(cmp.val) + " / " + formatter(value);
-                var pctWidth = (100 * cmp.val / value);
-                progress = ("<div style=\"margin-top: 8px;color: #999999; font-size: 11px;\">Progress: [" + Math.floor(pctWidth) + "%]&nbsp;&nbsp;" + pp + "</div>")
-                    + "<div style=\"margin-top: 7px; height: 5px; background-color: #770000\">"
-                    + ("<div style=\"width: " + pctWidth + "%; height: 100%; background-color: #229922;\"></div>")
-                    + "</div>";
-            }
-            return ("<div style=\"margin-bottom: 8px; font-size: 18px; color: #ff7700;\">" + name + "</div>")
-                + ("<div style=\"font-size: 12px; color: #cccccc;\">" + description + "</div>")
-                + ("" + progress);
-        });
-        // Add listener to component
-        cmp.whenReached(value, function () {
-            // Add the unlocked achievement class
-            element.className += " achievement-unlocked";
-            // Clear the 'locked achievement' mask
-            element.innerHTML = "";
-            // Mark as unlocked
-            isUnlocked = true;
-            console.log("Achievement unlocked:", name);
-            // Increment unlocked achievement count
-            _this.totalUnlocked.val++;
-        });
-        // Increment total achievement count
-        this.totalAchievements.val++;
-    };
-    return AchievementTracker;
-})();
 (function () {
     window.addEventListener("load", main);
     /**
@@ -776,14 +828,16 @@ var AchievementTracker = (function () {
     }
 })();
 /// <reference path="define.ts" />
-/// <reference path="utils.ts" />
-/// <reference path="Assert.ts" />
-/// <reference path="StorageDevice.ts" />
-/// <reference path="Tooltip.ts" />
-/// <reference path="Display.ts" />
-/// <reference path="HtmlView.ts" />
+/// <reference path="utils/utils.ts" />
+/// <reference path="utils/Assert.ts" />
+/// <reference path="utils/Tooltip.ts" />
+/// <reference path="utils/StorageDevice.ts" />
+/// <reference path="graphics/Display.ts" />
+/// <reference path="graphics/DisplayNode.ts" />
+/// <reference path="graphics/HtmlView.ts" />
+/// <reference path="graphics/Button.ts" />
 /// <reference path="Component.ts" />
-/// <reference path="Game.ts" />
 /// <reference path="AchievementTracker.ts" />
+/// <reference path="Game.ts" />
 /// <reference path="main.ts" />
 //# sourceMappingURL=game.js.map
